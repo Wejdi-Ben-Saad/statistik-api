@@ -11,21 +11,16 @@ from rest_framework.routers import DefaultRouter
 
 from statistik import views
 
-router = DefaultRouter()
-
-router.register('test/nuts1', views.Bruttoinlandsproduktnuts1ViewSet)
-# router.register('bruttoinlandsprodukt/nuts3', views.Bruttoinlandsproduktnuts3ViewSet)
 
 
 
 app_name = 'statistik'
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('<str:indicator_type>/', views.BaseIndikatorViewSet.as_view({'get': 'list'}), name='base-indikator-list'),
-    # path('bruttoinlandsprodukt', views.BaseIndikatorViewSet.as_view({'get': 'list'}), name='bruttoinlandsprodukt'),
-    # path('erwerbtaetige', views.BaseIndikatorViewSet.as_view({'get': 'list'}), name='erwerbtaetige'),
+    path('bruttoinlandsprodukt/nuts1/', views.BruttoinlandsproduktNuts1ViewSet.as_view({'get': 'list'}), name='bruttoinlandsprodukt_nuts1'),
+    path('bruttoinlandsprodukt/nuts3/', views.BruttoinlandsproduktNuts3ViewSet.as_view({'get': 'list'}), name='bruttoinlandsprodukt_nuts3'),
+    path('erwerbtaetige/nuts1/', views.IndikatorErwerbstaetigeNuts1ViewSet.as_view({'get': 'list'}), name='erwerbtaetige_nuts1'),
+    path('erwerbtaetige/nuts3/', views.IndikatorErwerbstaetigeNuts3ViewSet.as_view({'get': 'list'}), name='erwerbtaetige_nuts3'),
+    path('metadaten/', views.MetaDatenViewSet.as_view({'get': 'list'}), name='metadaten'),
 ]
-# urlpatterns = [
-#     path('', include(router.urls)),
-# ]
+
