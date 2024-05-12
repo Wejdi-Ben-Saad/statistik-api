@@ -1,42 +1,67 @@
 from django.core.management.base import BaseCommand
-from core.models import MetaDaten
+from core.models import MetaDaten, IndikatorErwerbstaetige, IndikatorBruttoinlandsprodukt
+from django.db import transaction
+import pandas as pd
+import numpy as np
+import json
 
 
 class Command(BaseCommand):
-    def initialize_metadata(self):
-        titel = "Bruttoinlandsprodukt, Bruttowertschöpfung in den kreisfreien Städten und Landkreisen der Bundesrepublik Deutschland 1992 und 1994 bis 2021\n"\
-                "Reihe 2, Kreisergebnisse Band 1"
+    def initialize_indicator_data(self, indicator_model_class, csv_file_path):
+        """initialize indicator data Assuming the CSV file has columns that match 
+        the model fields and . is the decimal separator"""
+        fields = indicator_model_class._meta.get_fields()
+        # Extract field names
+        field_names = [field.name for field in fields]
+        # make sure the data is not already imported
+        if indicator_model_class.objects.count() == 0:
+            df = pd.read_csv(
+                csv_file_path, delimiter=',', names=field_names)
 
-        herausgegeben_vom = "Arbeitskreis „Volkswirtschaftliche Gesamtrechnungen der Länder“ im Auftrag der Statistischen Ämter der 16 Bundesländer, des Statistischen Bundesamtes und des Statistischen Amtes Wirtschaft und Kultur der Landeshauptstadt Stuttgart."
+            # Function to strip spaces and convert to appropriate type
+            def clean_and_convert(x):
+                if isinstance(x, str):
+                    x = x.replace(' ', '')
+                    if x == '.':
+                        return None
+                    elif '.' in x:
+                        return float(x)
+                    else:
+                        return int(x)
+                return x
 
-        erscheinungs_folge = 'jährlich'
-        erschienen_im = 'Juli 2023'
-        herstellung_und_redaktion = """Statistisches Landesamt Baden-Württemberg
-Böblinger Straße 68
-70199 Stuttgart
-Telefon: 0711 641 - 0
-Fax: 0711 641 - 2440
-E-Mail: poststelle@stala.bwl.de
-Internet: www.statistik-bw.de"""
+            # Specify columns to convert to numeric
+            columns_to_convert = ['jahr_1992'] + \
+                [f'jahr_{year}' for year in range(1994, 2022)]
 
-        berechnungsstand_information = """Berechnungsstand des Statistischen Bundesamtes: August 2022
-Korrektur der Einwohnerzahlen 2020 bei den Kreisergebnissen für Thüringen.
-Korrektur am 14. Dezember 2023: Kreisergebnisse zu BIP und BWS für Baden-Württemberg, Jahre 2018 bis 
-2021 (Tabellen 1.1, 1.2, 1.3 und 2.1, 2.1.1, 2.1.2, 2.2, 2.3, 2.3.1, 2.3.1.1, 2.4, 2.4.1, 2.4.2, 2.4.3, 4, 6 und 8).
-Korrektur am 12. März 2024: Kreisergebnisse „Erwerbstätige“, „Bruttoinlandsprodukt in jeweiligen Preisen je
-erwerbstätige Person (Inlandskonzept)“, „Standard-Arbeitsvolumen der Erwerbstätigen (Inlandskonzept)“
-und „Bruttoinlandsprodukt in jeweiligen Preisen je Arbeitsstunde der Erwerbstätigen (Inlandskonzept)“ für 
-Nordrhein-Westfalen, Jahre 2018 bis 2021 (Tabellen 3.1 bis 3.4.3, 4, 7.1 bis 7.4.3 und 8).
-[Revision 2019/ESVG 2010/WZ 2008]"""
-        if MetaDaten.objects.count() == 0 :
+            # Apply the cleaning function to specified columns
+            df[columns_to_convert] = df[columns_to_convert].map(
+                clean_and_convert)
+            # Convert pandas nan  to None
+            df = df.replace(np.nan, None)
+            data = df.to_dict(orient='records')
+
+            with transaction.atomic():
+                # Iterate over the data list and insert row by row
+                for row in data:
+                    indicator_model_class.objects.create(**row)
+
+    def initialize_metadata(self, impressum_file_path):
+        with open(impressum_file_path, "r", encoding="utf-8") as impressum_file:
+            impressum_data = json.load(impressum_file)
+        if MetaDaten.objects.count() == 0:
             metadata = MetaDaten(
-                titel=titel,
-                herausgegeben_vom=herausgegeben_vom,
-                herstellung_und_redaktion=herstellung_und_redaktion,
-                erscheinungs_folge=erscheinungs_folge,
-                erschienen_im=erschienen_im,
-                berechnungsstand_information=berechnungsstand_information
+                titel=impressum_data['titel'],
+                herausgegeben_vom=impressum_data['herausgegeben_vom'],
+                erscheinungs_folge=impressum_data['erscheinungs_folge'],
+                erschienen_im=impressum_data['erschienen_im'],
+                berechnungsstand_information=impressum_data['berechnungsstand_information']
             )
             metadata.save()
+
     def handle(self, *args, **options):
-        self.initialize_metadata()
+        self.initialize_indicator_data(
+            IndikatorBruttoinlandsprodukt, './data/bruttoinlandsprodukt.csv')
+        self.initialize_indicator_data(
+            IndikatorErwerbstaetige, './data/erwerbtaetige.csv')
+        self.initialize_metadata('./data/impressum.json')

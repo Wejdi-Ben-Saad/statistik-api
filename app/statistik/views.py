@@ -19,12 +19,12 @@ class BruttoinlandsproduktViewSet(viewsets.ModelViewSet):
 class BruttoinlandsproduktNuts1ViewSet(BruttoinlandsproduktViewSet):
     """Bruftoinlandsprodukt in jeweiligen Preisen Auf Bundeslandebene (NUTS 1)"""
     def get_queryset(self):
-        return self.queryset.filter(nuts_1=1)
+        return self.queryset.filter(nuts_1=1).order_by("lfd_nr")
 
 class BruttoinlandsproduktNuts3ViewSet(BruttoinlandsproduktViewSet):
     """Bruftoinlandsprodukt in jeweiligen Preisen Auf Kreisebene (NUTS 3)"""
     def get_queryset(self):
-        return self.queryset.filter(nuts_3=3)
+        return self.queryset.filter(nuts_3=3).order_by("lfd_nr")
 
 #Erwerbstaetige indicator Views    
 class IndikatorErwerbstaetigeViewSet(viewsets.ModelViewSet):
@@ -37,12 +37,12 @@ class IndikatorErwerbstaetigeViewSet(viewsets.ModelViewSet):
 class IndikatorErwerbstaetigeNuts1ViewSet(IndikatorErwerbstaetigeViewSet):
     """Erwerbstäfige (Inlandskonzept) Auf Bundeslandebene (NUTS 1)"""
     def get_queryset(self):
-        return self.queryset.filter(nuts_1=1)
+        return self.queryset.filter(nuts_1=1).order_by("lfd_nr")
 
 class IndikatorErwerbstaetigeNuts3ViewSet(IndikatorErwerbstaetigeViewSet):
     """Erwerbstäfige (Inlandskonzept) Auf Kreisebene (NUTS 3)"""
     def get_queryset(self):
-        return self.queryset.filter(nuts_3=3)
+        return self.queryset.filter(nuts_3=3).order_by("lfd_nr")
     
 ### Metadaten view
 
